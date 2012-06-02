@@ -1,0 +1,119 @@
+#!/usr/bin/env python
+
+import unittest, re, sys, os
+from optparse import OptionParser
+
+def mbstrlen(text, encoding='utf-8'):
+    return len(text) + (len(unicode(text, encoding)) - len(text)) / 2
+
+def trans(monitext):
+    result = ''
+
+    while monitext:
+        # skip a newline character
+        matched = re.match(r'\n', monitext, re.M)
+        if matched:
+            result += '\n'
+            monitext = monitext[matched.end():]
+            continue
+
+        # code
+        matched = re.match(r'{{{.*?\n((\n|.)*?)\n}}}', monitext, re.M)
+
+        if matched:
+            body = matched.groups()[0]
+            result += '\n\t' + '\n\t'.join(body.split('\n'))
+            monitext = monitext[matched.end():]
+            continue
+
+        # title
+        matched = re.match(r'^(=+) (.+) (=+)', monitext)
+
+        if matched:
+            title = matched.groups()[1]
+            level = len(matched.groups()[0])
+
+            if level < 4:
+                result +=   title + os.linesep + {2 : '=', 3 : '-'}[level] * mbstrlen(title)
+            else:
+                result += "%(level)s %(title)s %(level)s" % { 'level' : '#' * level, 'title' : title }
+            monitext = monitext[matched.end():]
+            continue
+
+        # link
+        matched = re.match(r'(.*)\[([^\s]+ )?(.+)\]', monitext)
+
+        if matched:
+            pre = matched.groups()[0]
+            url = matched.groups()[1]
+            if url:
+                url = url.strip()
+            name = matched.groups()[2]
+
+            if url:
+                result += "%s[%s](%s)" % (pre, name, url)
+            else:
+                result += "%s[%s](%s)" % (pre, name, name)
+            monitext = monitext[matched.end():]
+
+        # list
+        matched = re.match(r'^(\s*)\* (.*)', monitext)
+
+        if matched:
+            depth = len(matched.groups()[0])
+            body = matched.groups()[1]
+
+            result += (depth - 1) * '\t' + '* ' + body
+            monitext = monitext[matched.end():]
+            continue
+
+        try:
+            index = monitext.index('\n') + 1
+            result += monitext[:index]
+            monitext = monitext[index:]
+        except ValueError:
+            break
+
+    return result
+
+def main(options, args):
+    if len(args) > 0:
+        text = open(args[0]).read()
+    else:
+        text = sys.stdin.read()
+
+    print trans(text)
+
+    #for line in input.read().split(os.linesep):
+    #    print trans(line)
+
+class TestClass(unittest.TestCase):
+    def testTitle(self):
+        # self.assertEquals("Title\n=====", trans("= Title ="))
+        self.assertEquals("Title\n=====", trans("== Title =="))
+        self.assertEquals("Title\n-----", trans("=== Title ==="))
+        self.assertEquals("#### Title ####", trans("==== Title ===="))
+        self.assertEquals("##### Title #####", trans("===== Title ====="))
+
+    def testList(self):
+        self.assertEquals("* item", trans(" * item"))
+        self.assertEquals("\t* item", trans("  * item"))
+        self.assertEquals("\t\t* item", trans("   * item"))
+
+    def testCode(self):
+        self.assertEquals("\n\tline1\n\tline2", trans("{{{\nline1\nline2\n}}}"))
+
+    def testLink(self):
+        self.assertEquals("[name](name)", trans("[name]"))
+        self.assertEquals("[name](http://domain/path/to/resource)", trans("[http://domain/path/to/resource name]"))
+
+if __name__ == '__main__':
+    parser = OptionParser()
+    parser.add_option("", "--test", action="store_true", dest="test", default=False, help="Run unittest")
+    options, args = parser.parse_args()
+
+    if options.test:
+        sys.argv.remove('--test')
+        unittest.main()
+    else:
+        main(options, args)
