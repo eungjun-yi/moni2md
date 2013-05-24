@@ -41,7 +41,7 @@ def trans(monitext):
             continue
 
         # link
-        matched = re.match(r'(.*)\[([^\s]+ )?(.+)\]', monitext)
+        matched = re.match(r'(.*)\[([^\s]+[ \t]+)?(.+)\]', monitext)
 
         if matched:
             pre = matched.groups()[0]
