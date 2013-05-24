@@ -51,10 +51,17 @@ def trans(monitext):
             name = matched.groups()[2]
 
             if url:
-                result += "%s[%s](%s)" % (pre, name, url)
+                replaced = "%s[%s](%s)" % (pre, name, url)
             else:
-                result += "%s[%s](%s)" % (pre, name, name)
-            monitext = monitext[matched.end():]
+                replaced = "%s[%s](%s)" % (pre, name, name)
+
+            monitext = monitext[:matched.start()] + replaced + monitext[matched.end():]
+
+        # important
+        monitext = re.sub(r'\'\'\'(.*?)\'\'\'', r'**\1**', monitext)
+
+        # italic
+        monitext = re.sub(r'\'\'(.*?)\'\'', r'_\1_', monitext)
 
         # list
         matched = re.match(r'^(\s*)\* (.*)', monitext)
@@ -65,13 +72,13 @@ def trans(monitext):
 
             result += (depth - 1) * '\t' + '* ' + body
             monitext = monitext[matched.end():]
-            continue
 
         try:
             index = monitext.index('\n') + 1
             result += monitext[:index]
             monitext = monitext[index:]
         except ValueError:
+            result += monitext
             break
 
     return result
@@ -106,6 +113,9 @@ class TestClass(unittest.TestCase):
     def testLink(self):
         self.assertEquals("[name](name)", trans("[name]"))
         self.assertEquals("[name](http://domain/path/to/resource)", trans("[http://domain/path/to/resource name]"))
+
+    def testLinkInList(self):
+        self.assertEquals("* [name](name)\n* name2\n* name3", trans(" * [name]\n * name2\n * name3"))
 
 if __name__ == '__main__':
     parser = OptionParser()
