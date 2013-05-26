@@ -36,7 +36,7 @@ def trans(monitext):
             if level < 4:
                 result +=   title + os.linesep + {2 : '=', 3 : '-'}[level] * mbstrlen(title)
             else:
-                result += "%(level)s %(title)s %(level)s" % { 'level' : '#' * level, 'title' : title }
+                result += ('#' * level) + " " + title
             monitext = monitext[matched.end():]
             continue
 
