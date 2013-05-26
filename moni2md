@@ -1,12 +1,19 @@
 #!/usr/bin/env python
 
-import unittest, re, sys, os
+""" Transcoding moniwiki text to markdown text """
+
+import unittest
+import re
+import sys
+import os
 from optparse import OptionParser
 
 def mbstrlen(text, encoding='utf-8'):
+    """stlren for a string include multibyte characters."""
     return len(text) + (len(unicode(text, encoding)) - len(text)) / 2
 
 def trans(monitext):
+    """Return a markdown text transcoded from the given moniwiki text."""
     result = ''
 
     while monitext:
@@ -17,7 +24,7 @@ def trans(monitext):
             monitext = monitext[matched.end():]
             continue
 
-        # code
+        # code block
         matched = re.match(r'{{{.*?\n((\n|.)*?)\n}}}', monitext, re.M)
 
         if matched:
@@ -26,7 +33,7 @@ def trans(monitext):
             monitext = monitext[matched.end():]
             continue
 
-        # title
+        # header
         matched = re.match(r'^(=+) (.+) (=+)', monitext)
 
         if matched:
@@ -34,7 +41,8 @@ def trans(monitext):
             level = len(matched.groups()[0])
 
             if level < 4:
-                result +=   title + os.linesep + {2 : '=', 3 : '-'}[level] * mbstrlen(title)
+                underscore = {2 : '=', 3 : '-'}[level] * mbstrlen(title)
+                result += title + os.linesep + underscore
             else:
                 result += ('#' * level) + " " + title
             monitext = monitext[matched.end():]
@@ -55,7 +63,8 @@ def trans(monitext):
             else:
                 replaced = "%s[%s](%s)" % (pre, name, name)
 
-            monitext = monitext[:matched.start()] + replaced + monitext[matched.end():]
+            monitext = monitext[:matched.start()] + replaced\
+                    + monitext[matched.end():]
 
         # important
         monitext = re.sub(r'\'\'\'(.*?)\'\'\'', r'**\1**', monitext)
@@ -69,7 +78,6 @@ def trans(monitext):
         if matched:
             depth = len(matched.groups()[0])
             body = matched.groups()[1]
-
             result += (depth - 1) * '\t' + '* ' + body
             monitext = monitext[matched.end():]
 
@@ -83,47 +91,56 @@ def trans(monitext):
 
     return result
 
-def main(options, args):
-    if len(args) > 0:
-        text = open(args[0]).read()
-    else:
-        text = sys.stdin.read()
+def main():
+    """Transcode or test."""
 
-    print trans(text)
-
-    #for line in input.read().split(os.linesep):
-    #    print trans(line)
-
-class TestClass(unittest.TestCase):
-    def testTitle(self):
-        # self.assertEquals("Title\n=====", trans("= Title ="))
-        self.assertEquals("Title\n=====", trans("== Title =="))
-        self.assertEquals("Title\n-----", trans("=== Title ==="))
-        self.assertEquals("#### Title ####", trans("==== Title ===="))
-        self.assertEquals("##### Title #####", trans("===== Title ====="))
-
-    def testList(self):
-        self.assertEquals("* item", trans(" * item"))
-        self.assertEquals("\t* item", trans("  * item"))
-        self.assertEquals("\t\t* item", trans("   * item"))
-
-    def testCode(self):
-        self.assertEquals("\n\tline1\n\tline2", trans("{{{\nline1\nline2\n}}}"))
-
-    def testLink(self):
-        self.assertEquals("[name](name)", trans("[name]"))
-        self.assertEquals("[name](http://domain/path/to/resource)", trans("[http://domain/path/to/resource name]"))
-
-    def testLinkInList(self):
-        self.assertEquals("* [name](name)\n* name2\n* name3", trans(" * [name]\n * name2\n * name3"))
-
-if __name__ == '__main__':
     parser = OptionParser()
-    parser.add_option("", "--test", action="store_true", dest="test", default=False, help="Run unittest")
+    parser.add_option("", "--test", action="store_true", dest="test",
+                      default=False, help="Run unittest")
     options, args = parser.parse_args()
 
     if options.test:
         sys.argv.remove('--test')
         unittest.main()
     else:
-        main(options, args)
+        if len(args) > 0:
+            text = open(args[0]).read()
+        else:
+            text = sys.stdin.read()
+
+        sys.stdout.write(trans(text))
+
+class TestClass(unittest.TestCase):
+    """Tests runned by --test option."""
+
+    def test_title(self):
+        """Test transcoding for headers."""
+        self.assertEquals("Title\n=====", trans("== Title =="))
+        self.assertEquals("Title\n-----", trans("=== Title ==="))
+        self.assertEquals("#### Title ####", trans("==== Title ===="))
+        self.assertEquals("##### Title #####", trans("===== Title ====="))
+
+    def test_list(self):
+        """Test transcoding for list."""
+        self.assertEquals("* item", trans(" * item"))
+        self.assertEquals("\t* item", trans("  * item"))
+        self.assertEquals("\t\t* item", trans("   * item"))
+
+    def test_code(self):
+        """Test transcoding for code block."""
+        self.assertEquals("\n\tline1\n\tline2",
+                          trans("{{{\nline1\nline2\n}}}"))
+
+    def test_link(self):
+        """Test transcoding for link."""
+        self.assertEquals("[name](name)", trans("[name]"))
+        self.assertEquals("[name](http://domain/path/to/resource)",
+                          trans("[http://domain/path/to/resource name]"))
+
+    def test_link_in_list(self):
+        """Test transcoding for link in list."""
+        self.assertEquals("* [name](name)\n* name2\n* name3",
+                          trans(" * [name]\n * name2\n * name3"))
+
+if __name__ == '__main__':
+    main()
