@@ -15,12 +15,19 @@ def mbstrlen(text, encoding='utf-8'):
 def trans(monitext):
     """Return a markdown text transcoded from the given moniwiki text."""
     result = ''
+    last_line = 'empty'
 
     while monitext:
-        # skip a newline character
-        matched = re.match(r'\n', monitext, re.M)
+        # newline character or empty line(s)
+        matched = re.match(r'\n+', monitext, re.M)
+
         if matched:
-            result += '\n'
+            result += matched.group()
+            if len(matched.group()) > 1:
+                last_line = 'empty'
+            elif last_line == 'title':
+                result += '\n'
+                last_line = 'empty'
             monitext = monitext[matched.end():]
             continue
 
@@ -31,6 +38,7 @@ def trans(monitext):
             body = matched.groups()[0]
             result += '\n\t' + '\n\t'.join(body.split('\n'))
             monitext = monitext[matched.end():]
+            last_line = 'code'
             continue
 
         # header
@@ -40,12 +48,18 @@ def trans(monitext):
             title = matched.groups()[1]
             level = len(matched.groups()[0])
 
+            if last_line != 'empty':
+                result += '\n'
+
             if level < 4:
                 underscore = {2 : '=', 3 : '-'}[level] * mbstrlen(title)
                 result += title + os.linesep + underscore
             else:
                 result += ('#' * level) + " " + title
             monitext = monitext[matched.end():]
+
+            last_line = 'title'
+
             continue
 
         # link
@@ -81,7 +95,10 @@ def trans(monitext):
             result += (depth - 1) * '\t' + '* ' + body
             monitext = monitext[matched.end():]
 
+        last_line = 'others'
+
         try:
+            # Go to the next line
             index = monitext.index('\n') + 1
             result += monitext[:index]
             monitext = monitext[index:]
