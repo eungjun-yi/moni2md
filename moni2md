@@ -134,8 +134,8 @@ class TestClass(unittest.TestCase):
         """Test transcoding for headers."""
         self.assertEquals("Title\n=====", trans("== Title =="))
         self.assertEquals("Title\n-----", trans("=== Title ==="))
-        self.assertEquals("#### Title ####", trans("==== Title ===="))
-        self.assertEquals("##### Title #####", trans("===== Title ====="))
+        self.assertEquals("#### Title", trans("==== Title ===="))
+        self.assertEquals("##### Title", trans("===== Title ====="))
 
     def test_list(self):
         """Test transcoding for list."""
