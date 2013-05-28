@@ -159,5 +159,13 @@ class TestClass(unittest.TestCase):
         self.assertEquals("* [name](name)\n* name2\n* name3",
                           trans(" * [name]\n * name2\n * name3"))
 
+    def test_empty_line_before_and_after_title(self):
+        """Test transcoding for link in list."""
+        self.assertEquals("blahblah\n\n#### title\n\nblahblah",
+                          trans("blahblah\n==== title ====\nblahblah"))
+
+        self.assertEquals("blahblah\n\n#### title\n\nblahblah",
+                          trans("blahblah\n\n==== title ====\n\nblahblah"))
+
 if __name__ == '__main__':
     main()
