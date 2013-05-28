@@ -99,7 +99,7 @@ def trans(monitext):
 
         try:
             # Go to the next line
-            index = monitext.index('\n') + 1
+            index = monitext.index('\n')
             result += monitext[:index]
             monitext = monitext[index:]
         except ValueError:
